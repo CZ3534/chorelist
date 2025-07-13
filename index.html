@@ -6,14 +6,13 @@
 <title>Kid Chore Tracker</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-/* wheel */
+/* roulette wheel */
 #wheel{width:260px;height:260px;border:8px solid #444;border-radius:50%;margin:auto;
        background:conic-gradient(#1e40af 0 36deg,#2563eb 36deg 72deg,#1e40af 72deg 108deg,
                                  #2563eb 108deg 144deg,#1e40af 144deg 180deg,#2563eb 180deg 216deg,
                                  #1e40af 216deg 252deg,#2563eb 252deg 288deg,#1e40af 288deg 324deg,
-                                 #2563eb 324deg 360deg);}
-#pointer{width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;
-         border-bottom:25px solid #e11d48;margin:auto}
+                                 #2563eb 324deg 360deg)}
+#pointer{width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-bottom:25px solid #e11d48;margin:auto}
 .label{position:absolute;left:50%;top:50%;transform-origin:0 0;font-size:.8rem;font-weight:bold;color:#fff}
 .label:nth-child(1){transform:rotate(18deg)  translateX(72px) rotate(-18deg)}
 .label:nth-child(2){transform:rotate(54deg)  translateX(72px) rotate(-54deg)}
@@ -40,96 +39,132 @@
 <!-- spinner -->
 <div id="loading" class="flex items-center justify-center mt-4">
   <svg class="animate-spin h-6 w-6 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
   </svg>
   <span class="ml-2 text-sm text-gray-400">Loading chores…</span>
 </div>
 
-<button id="saveBtn" class="w-full bg-emerald-600 text-white py-2 rounded mt-4 disabled:opacity-40">Save & Spin</button>
+<button id="saveBtn" class="w-full bg-emerald-600 text-white py-2 rounded mt-4 disabled:opacity-40">
+  Save & Spin
+</button>
+
 <div id="resultArea" class="mt-6"></div>
 
 <!-- roulette -->
 <div id="rouletteArea" class="hidden flex flex-col items-center gap-4">
   <div id="pointer"></div>
   <div id="wheel">
-     <span class="label">₱1</span><span class="label">₱1</span><span class="label">₱1</span>
-     <span class="label">₱1</span><span class="label">₱1</span><span class="label">₱1</span>
-     <span class="label">₱1</span><span class="label">₱2</span><span class="label">₱2</span>
-     <span class="label text-[10px]">30&nbsp;min</span>
+    <span class="label">₱1</span><span class="label">₱1</span><span class="label">₱1</span>
+    <span class="label">₱1</span><span class="label">₱1</span><span class="label">₱1</span>
+    <span class="label">₱1</span><span class="label">₱2</span><span class="label">₱2</span>
+    <span class="label text-[10px]">30&nbsp;min</span>
   </div>
   <button id="spinBtn" class="bg-amber-500 text-gray-900 px-4 py-2 rounded">Spin!</button>
 </div>
 
 <script>
-const ENDPOINT='https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';        //  <<–– paste your /exec link
-const wheel=['₱1','₱1','₱1','₱1','₱1','₱1','₱1','₱2','₱2','30 min watching'];
-let chores=[];
+/* －－ CONFIG －－ */
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';     // 〈〈 paste your /exec URL
+const wheel    = ['₱1','₱1','₱1','₱1','₱1','₱1','₱1','₱2','₱2','30 min watching'];
+let   chores   = [];
 
-/* bootstrap */
-document.addEventListener('DOMContentLoaded',async()=>{
+/* －－ BOOTSTRAP －－ */
+document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('loading').style.display='flex';
-  await fetch(`${ENDPOINT}?action=chores`).then(r=>r.json()).then(d=>chores=d.chores||[]);
-  document.getElementById('date').valueAsNumber=
-      Date.now()-(new Date()).getTimezoneOffset()*60000;
-  document.getElementById('date').addEventListener('change',render);
-  document.getElementById('saveBtn').addEventListener('click',save);
-  document.getElementById('spinBtn').addEventListener('click',()=>spin(true));
-  render();
+  // fetch chore names
+  chores = (await fetch(`${ENDPOINT}?action=chores`).then(r=>r.json())).chores || [];
+
+  // default date = today
+  document.getElementById('date').valueAsNumber =
+    Date.now() - (new Date()).getTimezoneOffset()*60000;
+
+  document.getElementById('date')    .addEventListener('change', renderChecklist);
+  document.getElementById('saveBtn') .addEventListener('click', saveData);
+  document.getElementById('spinBtn') .addEventListener('click', () => spinWheel(true));
+
+  renderChecklist();
 });
 
-/* render checklist */
-async function render(){
-  document.getElementById('loading').style.display='flex';
-  const date=document.getElementById('date').value;
-  const rows=await fetch(`${ENDPOINT}?action=log&date=${date}`).then(r=>r.json()).then(d=>d.rows||[]);
-  - const done = new Set(rows.filter(r => r[2] === 'TRUE').map(r => r[1]));
-+ const done = new Set(rows.filter(r => String(r[2]).toLowerCase() === 'true')
-+                          .map(r => r[1]));
+/* －－ RENDER CHECKLIST －－ */
+async function renderChecklist() {
+  const load   = document.getElementById('loading');
+  const listEl = document.getElementById('listArea');
+  load.style.display = 'flex';
+  listEl.innerHTML   = '';
 
-  document.getElementById('listArea').innerHTML=
-    `<table class="w-full border border-gray-700 text-sm">
-       <tbody>${chores.map(c=>`<tr>
-         <td class="p-2 border-b border-gray-700">${c}</td>
-         <td class="p-2 border-b border-gray-700 text-center">
-           <input type="checkbox" data-c="${c}" ${done.has(c)?'checked':''}>
-         </td></tr>`).join('')}
-       </tbody></table>`;
-  document.getElementById('loading').style.display='none';
-  toggleWheel();
+  try {
+    const date = document.getElementById('date').value;
+    if (!date) throw new Error('Pick a date first.');
+
+    const rows = await fetch(`${ENDPOINT}?action=log&date=${date}`).then(r=>r.json());
+    const done = new Set(rows.filter(r=>String(r[2]).toLowerCase()==='true').map(r=>r[1]));
+
+    listEl.innerHTML =
+      `<table class="w-full border border-gray-700 text-sm"><tbody>` +
+      chores.map(c=>`
+        <tr>
+          <td class="p-2 border-b border-gray-700">${c}</td>
+          <td class="p-2 border-b border-gray-700 text-center">
+            <input type="checkbox" data-c="${c}" ${done.has(c)?'checked':''}>
+          </td>
+        </tr>`).join('') +
+      `</tbody></table>`;
+  } catch(err) {
+    console.error(err);
+    listEl.innerHTML = `<p class="text-red-400">Error: ${err.message}</p>`;
+  } finally {
+    load.style.display = 'none';
+  }
+
+  updateWheelVisibility();
 }
 
-/* save via simple GET (no CORS pre-flight) */
-async function save(){
-  const date=document.getElementById('date').value;
-  const list=[...document.querySelectorAll('[data-c]')].map(cb=>({chore:cb.dataset.c,done:cb.checked}));
-  const allDone=list.every(i=>i.done);
-  const reward=allDone?spin():'';          // pick reward even if we hide wheel later
-  const qs=`action=save&date=${encodeURIComponent(date)}&payload=${encodeURIComponent(JSON.stringify(list))}&reward=${encodeURIComponent(reward)}`;
-  const ok=await fetch(`${ENDPOINT}?${qs}`).then(r=>r.text()).catch(()=>null);
-  document.getElementById('resultArea').innerHTML = ok?
-      `<p class="text-lg font-semibold">Saved.</p>`+
-      (reward?`<p class="text-xl mt-2">🎉 Reward: <span class="font-bold text-amber-400">${reward}</span></p>`:'')
-    : `<p class="text-red-400">Error saving – check connection.</p>`;
-  if(reward) document.getElementById('rouletteArea').classList.add('hidden');
+/* －－ SAVE －－ */
+async function saveData() {
+  const date = document.getElementById('date').value;
+  const list = [...document.querySelectorAll('[data-c]')]
+               .map(cb=>({chore:cb.dataset.c, done:cb.checked}));
+  const allDone = list.every(i=>i.done);
+  const reward  = allDone ? spinWheel() : '';
+
+  const qs = new URLSearchParams({
+    action: 'save',
+    date,
+    payload: JSON.stringify(list),
+    reward
+  }).toString();
+
+  try {
+    document.getElementById('saveBtn').disabled = true;
+    await fetch(`${ENDPOINT}?${qs}`).then(r=>r.text());
+    document.getElementById('resultArea').innerHTML =
+      `<p class="text-lg font-semibold">Saved.</p>` +
+      (reward ? `<p class="text-xl mt-2">🎉 Reward: <span class="font-bold text-amber-400">${reward}</span></p>` : '');
+    if (reward) document.getElementById('rouletteArea').classList.add('hidden');
+  } catch(err) {
+    alert('Error saving: ' + err.message);
+  } finally {
+    document.getElementById('saveBtn').disabled = false;
+  }
 }
 
-/* roulette helpers */
-function spin(show=false){
-  const idx=Math.floor(Math.random()*10);
-  if(show){
-    const wheelEl=document.getElementById('wheel');
-    wheelEl.style.transition='transform 4s cubic-bezier(.33,1,.68,1)';
-    wheelEl.style.transform=`rotate(${360*5+idx*36+18}deg)`;
+/* －－ ROULETTE －－ */
+function spinWheel(show=false) {
+  const idx = Math.floor(Math.random()*10);
+  if (show) {
+    const wheelEl = document.getElementById('wheel');
+    wheelEl.style.transition = 'transform 4s cubic-bezier(.33,1,.68,1)';
+    wheelEl.style.transform  = `rotate(${360*5 + idx*36 + 18}deg)`;
   }
   return wheel[idx];
 }
-function toggleWheel(){
+function updateWheelVisibility() {
   const boxes=[...document.querySelectorAll('[data-c]')];
   document.getElementById('rouletteArea')
-          .classList.toggle('hidden',!(boxes.length&&boxes.every(b=>b.checked)));
+          .classList.toggle('hidden', !(boxes.length && boxes.every(b=>b.checked)));
 }
-document.addEventListener('change',toggleWheel);
+document.addEventListener('change', updateWheelVisibility);
 </script>
 </body>
 </html>
