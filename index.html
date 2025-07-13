@@ -87,8 +87,8 @@ document.getElementById('date').value = todayISO;
   renderChecklist();
 });
 
-/* －－ RENDER CHECKLIST －－ */
-async function renderChecklist() {
+/* ---------- RENDER CHECKLIST (safe) ---------- */
+async function renderChecklist () {
   const load   = document.getElementById('loading');
   const listEl = document.getElementById('listArea');
   load.style.display = 'flex';
@@ -98,31 +98,40 @@ async function renderChecklist() {
     const date = document.getElementById('date').value;
     if (!date) throw new Error('Pick a date first.');
 
-    // NEW (safe)
-const data = await fetch(`${ENDPOINT}?action=log&date=${date}`).then(r=>r.json());
-if (data.error) throw new Error(data.error);         // e.g. Invalid request
-const rows = Array.isArray(data.rows) ? data.rows : [];
-    const done = new Set(rows.filter(r=>String(r[2]).toLowerCase()==='true').map(r=>r[1]));
+    /* fetch rows safely */
+    const url   = `${ENDPOINT}?action=log&date=${date}`;
+    const reply = await fetch(url).then(r => r.json());
+    console.log('log reply →', reply);              // ← keep for debugging
+    if (reply.error) throw new Error(reply.error);
 
+    const rows = Array.isArray(reply.rows) ? reply.rows : [];
+    const done = new Set(rows
+                  .filter(r => String(r[2]).toLowerCase() === 'true')
+                  .map(r => r[1]));
+
+    /* build table */
     listEl.innerHTML =
       `<table class="w-full border border-gray-700 text-sm"><tbody>` +
-      chores.map(c=>`
+      chores.map(c => `
         <tr>
           <td class="p-2 border-b border-gray-700">${c}</td>
           <td class="p-2 border-b border-gray-700 text-center">
-            <input type="checkbox" data-c="${c}" ${done.has(c)?'checked':''}>
+            <input type="checkbox" data-c="${c}" ${done.has(c) ? 'checked' : ''}>
           </td>
         </tr>`).join('') +
       `</tbody></table>`;
-  } catch(err) {
+  }
+  catch (err) {
     console.error(err);
     listEl.innerHTML = `<p class="text-red-400">Error: ${err.message}</p>`;
-  } finally {
-    load.style.display = 'none';
+  }
+  finally {
+    load.style.display = 'none';        // ← ALWAYS hide spinner
   }
 
   updateWheelVisibility();
 }
+
 
 /* －－ SAVE －－ */
 async function saveData() {
