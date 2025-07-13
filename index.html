@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kid Chore Tracker</title>
+<!-- Tailwind via CDN keeps styling small & mobile-first -->
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+/* Roulette wheel */
+#wheel { width: 260px; height: 260px; border-radius: 50%; border: 8px solid #444; position: relative; margin:auto; }
+.slice { position:absolute; width:50%; height:50%; transform-origin:100% 100%; clip-path: polygon(0 0, 100% 0, 100% 100%); }
+.slice span { position:absolute; top:35%; left:55%; transform:translate(-50%,-50%) rotateZ(-90deg); font-size:.8rem; font-weight:bold; white-space:nowrap; }
+#pointer { width:0; height:0; border-left:15px solid transparent; border-right:15px solid transparent; border-bottom:25px solid #e11d48; margin:auto; }
+@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(3600deg)} }
+</style>
+</head>
+<body class="bg-gray-900 text-gray-100 p-4 min-h-screen flex flex-col gap-4">
+
+<h1 class="text-xl font-bold text-center">Chore Checklist</h1>
+
+<label class="block text-sm mb-1" for="date">Choose date</label>
+<input id="date" type="date" class="w-full p-2 rounded text-gray-900" />
+
+<div id="listArea" class="mt-4"></div>
+
+<button id="saveBtn" class="w-full bg-emerald-600 text-white py-2 rounded mt-4 disabled:opacity-40">Save &amp; Spin</button>
+
+<!-- Results -->
+<div id="resultArea" class="mt-6"></div>
+
+<!-- Roulette -->
+<div id="rouletteArea" class="hidden flex flex-col items-center gap-4">
+  <div id="pointer"></div>
+  <div id="wheel"></div>
+  <button id="spinBtn" class="bg-amber-500 text-gray-900 px-4 py-2 rounded">Spin!</button>
+</div>
+
+<script>
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycbzJHkbD2hlAb5URX5cRJOF1pp9nMmasO8fFa09qndvOi-JcCfr_KG7gs1asvnayI10K/exec';
+const wheelConf = [
+  '₱1','₱1','₱1','₱1','₱1','₱1','₱1',   // 7 parts
+  '₱2','₱2',                               // 2 parts
+  '30 min watching'                         // 1 part
+];
+let choresCache = [];
+
+document.addEventListener('DOMContentLoaded', init);
+
+async function init() {
+  await loadChores();
+  document.getElementById('date').valueAsNumber = Date.now() - (new Date()).getTimezoneOffset()*60000; // today default
+  document.getElementById('date').addEventListener('change', renderChecklist);
+  document.getElementById('saveBtn').addEventListener('click', saveData);
+  setupWheel();
+  renderChecklist();
+}
+
+/* ---------- Sheet requests ---------- */
+async function loadChores() {
+  const res = await fetch(`${ENDPOINT}?action=chores`);
+  const data = await res.json();
+  choresCache = data.chores || [];
+}
+async function loadLog(date) {
+  const res = await fetch(`${ENDPOINT}?action=log&date=${date}`);
+  return (await res.json()).rows || [];
+}
+async function postLog(date, list, reward) {
+  await fetch(ENDPOINT, {
+    method:'POST',
+    body: JSON.stringify({ date, list, reward }),
+    headers:{'Content-Type':'application/json'}
+  });
+}
+
+/* ---------- UI ---------- */
+async function renderChecklist() {
+  const date = document.getElementById('date').value;
+  const existing = await loadLog(date);
+  const doneSet = new Set(existing.filter(r=>r[2]==='TRUE').map(r=>r[1]));
+
+  const wrap = document.getElementById('listArea');
+  wrap.innerHTML = `
+    <table class="w-full border border-gray-700 text-sm">
+      <tbody>
+        ${choresCache.map(chore=>`
+          <tr>
+            <td class="p-2 border-b border-gray-700">${chore}</td>
+            <td class="p-2 border-b border-gray-700 text-center">
+              <input type="checkbox" data-chore="${chore}" ${doneSet.has(chore)?'checked':''}>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function saveData() {
+  const date = document.getElementById('date').value;
+  if (!date) return alert('Pick a date first');
+
+  const list = [...document.querySelectorAll('[data-chore]')].map(cb=>({
+    chore: cb.dataset.chore,
+    done: cb.checked
+  }));
+  const allDone = list.every(i=>i.done);
+
+  // If not all done, just save list (reward empty)
+  const reward = allDone ? spinWheel() : '';
+
+  await postLog(date, list, reward);
+
+  const resultArea = document.getElementById('resultArea');
+  resultArea.innerHTML = `
+    <p class="text-lg font-semibold">Saved for ${date}.</p>
+    ${reward ? `<p class="text-xl mt-2">🎉 Reward: <span class="font-bold text-amber-400">${reward}</span></p>` : '<p>Keep going to earn today’s reward!</p>'}`;
+
+  if (reward) document.getElementById('rouletteArea').classList.add('hidden');
+}
+
+/* ---------- Roulette ---------- */
+function setupWheel() {
+  const wheel = document.getElementById('wheel');
+  wheelConf.forEach((txt,i)=>{
+    const slice = document.createElement('div');
+    slice.className = 'slice';
+    slice.style.transform = `rotate(${i*36}deg) skewY(-54deg)`; // 360/10=36 ; 90-36=54
+    slice.style.background = i%2? '#1e40af':'#2563eb';
+    slice.innerHTML = `<span style="transform:rotate(54deg)">${txt}</span>`;
+    wheel.appendChild(slice);
+  });
+  document.getElementById('spinBtn').addEventListener('click', ()=>spinWheel(true));
+}
+function spinWheel(showAnim=false) {
+  const idx = Math.floor(Math.random()*10);          // 0-9
+  const deg = 360*5 + idx*36 + 18;                   // land in middle of slice
+  if (showAnim) {
+    const wheel = document.getElementById('wheel');
+    wheel.style.transition = 'transform 4s cubic-bezier(0.33,1,0.68,1)';
+    wheel.style.transform = `rotate(${deg}deg)`;
+  }
+  return wheelConf[idx];
+}
+
+/* when all chores checked enable roulette */
+document.addEventListener('change', ()=> {
+  const list = [...document.querySelectorAll('[data-chore]')];
+  const allDone = list.length && list.every(i=>i.checked);
+  document.getElementById('rouletteArea').classList.toggle('hidden', !allDone);
+});
+</script>
+</body>
+</html>
