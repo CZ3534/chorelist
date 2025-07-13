@@ -108,4 +108,99 @@ document.getElementById('date').value=todayISO;
 updateDayBadge(todayISO);
 function updateDayBadge(iso){
   document.getElementById('dayBadge').textContent=
-      new Date(iso).toLocaleDateStr
+      new Date(iso).toLocaleDateString('en-US',{weekday:'long'});
+}
+
+/* bootstrap */
+document.addEventListener('DOMContentLoaded',async()=>{
+  reelArr=shuffle(baseRewards.slice()); buildReel();
+  document.getElementById('date').addEventListener('change',e=>{
+    updateDayBadge(e.target.value); render();
+  });
+  document.getElementById('saveBtn').addEventListener('click',save);
+  document.addEventListener('change',updateUI);
+  chores=(await fetch(`${ENDPOINT}?action=chores`).then(r=>r.json())).chores||[];
+  render();
+});
+
+/* reel setup */
+function buildReel(){
+  const reel=document.getElementById('reel'); reel.innerHTML='';
+  const extended=[...reelArr,...reelArr,...reelArr,...reelArr];
+  extended.forEach(t=>{
+    const div=document.createElement('div'); div.className='tile'; div.textContent=t;
+    reel.appendChild(div);
+  });
+}
+async function spinAndGetReward(){
+  const idx=Math.floor(Math.random()*10);
+  const stop=20+idx, offset=stop*72;
+  const reel=document.getElementById('reel');
+  reel.style.transition='transform 5s cubic-bezier(.15,.8,.35,1)';   // 5 s
+  reel.style.transform=`translateY(-${offset}px)`;
+  await wait(5000);
+  return reelArr[idx];
+}
+
+/* render chores */
+async function render(){
+  rewardDone=false;
+  const load=document.getElementById('loading'); const list=document.getElementById('listArea');
+  load.classList.remove('hidden'); list.innerHTML='';
+  const date=document.getElementById('date').value;
+  const data=await fetch(`${ENDPOINT}?action=log&date=${date}`).then(r=>r.json());
+  const rows=Array.isArray(data.rows)?data.rows:[];
+
+  const doneSet=new Set(rows.filter(r=>String(r[2]).toLowerCase()==='true').map(r=>r[1]));
+  const rewardRow=rows.find(r=>r[3]);
+  document.getElementById('resultArea').innerHTML=
+      rewardRow?`<p class="text-yellow-300 font-bold text-xl">🎁 ${rewardRow[3]}</p>`:'';
+  rewardDone=!!rewardRow;
+
+  list.innerHTML=chores.map(c=>`
+    <label class="flex items-center py-3">
+      <input type="checkbox" data-c="${c}" ${doneSet.has(c)?'checked':''}
+             class="accent-emerald-500 w-7 h-7 mr-4 rounded focus:ring-0">
+      <span class="text-lg">${c}</span>
+    </label>`).join('');
+
+  load.classList.add('hidden');
+  updateUI();
+}
+/* disable ticks if rewardDone */
+function disableCheckboxes(disabled){
+  document.querySelectorAll('[data-c]').forEach(cb=>cb.disabled=disabled);
+}
+function updateUI(){
+  const boxes=[...document.querySelectorAll('[data-c]')];
+  const checked=boxes.filter(b=>b.checked).length;
+  const allDone=boxes.length && checked===boxes.length;
+  document.getElementById('progress').style.width=
+      boxes.length?`${(checked/boxes.length)*100}%`:'0';
+  document.getElementById('spinnerArea')
+          .classList.toggle('hidden',!allDone || rewardDone);
+  document.getElementById('saveBtn').disabled = allDone && rewardDone;
+  disableCheckboxes(rewardDone);    // ← NEW
+}
+
+/* save */
+async function save(){
+  const date=document.getElementById('date').value;
+  const boxes=[...document.querySelectorAll('[data-c]')];
+  const allDone=boxes.length && boxes.every(b=>b.checked);
+  let reward='';
+  if(allDone && !rewardDone){
+    reward=await spinAndGetReward();
+  }
+  const list=boxes.map(cb=>({chore:cb.dataset.c,done:cb.checked}));
+  const qs=new URLSearchParams({action:'save',date,payload:JSON.stringify(list),reward}).toString();
+
+  document.getElementById('saveBtn').disabled=true;
+  await fetch(`${ENDPOINT}?${qs}`).then(r=>r.text());
+  document.getElementById('saveBtn').disabled=false;
+
+  render();
+}
+</script>
+</body>
+</html>
