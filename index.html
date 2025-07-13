@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kid Chore Tracker</title>
 
-<!-- Poppins + Tailwind -->
+<!-- Font & Tailwind -->
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
@@ -13,21 +13,42 @@ tailwind.config={theme:{extend:{fontFamily:{sans:['Poppins','sans-serif']}}}};
 </script>
 
 <style>
-/* slot-machine container */
+/* ─── SLOT MACHINE SKIN ───────────────────────────── */
+.slot-cabinet{
+  width:260px;padding:20px;border-radius:20px;position:relative;
+  border:6px solid #777;background:linear-gradient(145deg,#4b5563,#1f2937);
+  box-shadow:inset 0 0 8px #000,0 8px 12px rgba(0,0,0,0.6);
+}
+.bulb-row{
+  display:flex;gap:6px;justify-content:center;margin-bottom:16px;
+}
+.bulb{
+  width:12px;height:12px;border-radius:50%;
+  background:radial-gradient(#fde68a,#ca8a04 60%,#1f2937);
+}
 #reelFrame{
-  width:200px;height:60px;overflow:hidden;
-  border:6px solid #334;border-radius:12px;background:#111;margin:auto
+  width:220px;height:72px;overflow:hidden;margin:auto;border-radius:12px;
+  border:4px solid #111;box-shadow:inset 0 0 6px #000;background:#000;
 }
-#reel{
-  display:flex;flex-direction:column;
-}
+#reel{display:flex;flex-direction:column}
 .tile{
-  height:60px;display:flex;align-items:center;justify-content:center;
-  font-size:1.25rem;font-weight:600;color:#fff;
+  height:72px;display:flex;align-items:center;justify-content:center;
+  font-size:1.5rem;font-weight:600;color:#fff;
 }
 .tile:nth-child(odd){background:#0ea5e9}
 .tile:nth-child(even){background:#22c55e}
-#pointerBar{width:220px;height:0;border-top:20px solid #f43f5e;margin:auto}
+.lever{
+  position:absolute;right:-34px;top:50%;transform:translateY(-50%);
+  width:18px;height:80px;background:linear-gradient(#9ca3af,#4b5563);
+  border-radius:10px;border:3px solid #777;
+}
+.lever:after{
+  content:'';position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);
+  width:30px;height:30px;border-radius:50%;background:#dc2626;border:4px solid #b91c1c;
+  box-shadow:0 0 4px #000;
+}
+@media(max-width:420px){.slot-cabinet{transform:scale(.9)}}
+/* ─────────────────────────────────────────────────── */
 </style>
 </head>
 
@@ -36,7 +57,7 @@ tailwind.config={theme:{extend:{fontFamily:{sans:['Poppins','sans-serif']}}}};
 <div class="w-full max-w-lg">
   <h1 class="text-2xl font-semibold text-center mb-4">Chore Checklist</h1>
 
-  <!-- date row with badge -->
+  <!-- date row -->
   <div class="flex items-end gap-3 mb-4">
     <div class="flex-1">
       <label class="block text-sm font-medium mb-1" for="date">Choose date</label>
@@ -53,7 +74,7 @@ tailwind.config={theme:{extend:{fontFamily:{sans:['Poppins','sans-serif']}}}};
     <div id="progress" class="h-3 bg-emerald-500 transition-all w-0"></div>
   </div>
 
-  <!-- list -->
+  <!-- chore list -->
   <div class="bg-gray-800 rounded-xl shadow-lg p-4 mb-6">
     <div id="loading" class="flex items-center justify-center">
       <svg class="animate-spin h-7 w-7 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -73,12 +94,19 @@ tailwind.config={theme:{extend:{fontFamily:{sans:['Poppins','sans-serif']}}}};
 
   <div id="resultArea" class="text-center mt-4"></div>
 
-  <!-- slot machine -->
-  <div id="spinnerArea"
-       class="hidden flex flex-col items-center gap-3 mt-6">
-    <div id="pointerBar"></div>
-    <div id="reelFrame">
-      <div id="reel"></div>
+  <!-- SLOT MACHINE -->
+  <div id="spinnerArea" class="hidden flex flex-col items-center mt-6 relative">
+    <div class="slot-cabinet">
+      <!-- bulbs -->
+      <div class="bulb-row">
+        <!-- 10 bulbs -->
+        <div class="bulb"></div><div class="bulb"></div><div class="bulb"></div><div class="bulb"></div><div class="bulb"></div>
+        <div class="bulb"></div><div class="bulb"></div><div class="bulb"></div><div class="bulb"></div><div class="bulb"></div>
+      </div>
+      <!-- window -->
+      <div id="reelFrame"><div id="reel"></div></div>
+      <!-- lever -->
+      <div class="lever"></div>
     </div>
   </div>
 </div>
@@ -87,7 +115,7 @@ tailwind.config={theme:{extend:{fontFamily:{sans:['Poppins','sans-serif']}}}};
 /* CONFIG ---------------------------------------------------------- */
 const ENDPOINT='https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';
 const baseRewards=['₱1','₱1','₱1','₱1','₱1','₱1','₱1','₱2','₱2','30 mins watch'];
-let chores=[], reelArr=[], rewardDone=false;
+let chores=[],reelArr=[],rewardDone=false;
 
 /* helpers */
 const shuffle=a=>a.sort(()=>Math.random()-0.5);
@@ -114,24 +142,21 @@ document.addEventListener('DOMContentLoaded',async()=>{
   render();
 });
 
-/* build slot tiles */
+/* build reel */
 function buildReel(){
   const reel=document.getElementById('reel'); reel.innerHTML='';
-  // prepend two extra cycles for smooth spin
-  const extended=[...reelArr, ...reelArr, ...reelArr];
+  const extended=[...reelArr,...reelArr,...reelArr];
   extended.forEach(t=>{
     const div=document.createElement('div');
-    div.className='tile';
-    div.textContent=t;
-    reel.appendChild(div);
+    div.className='tile'; div.textContent=t; reel.appendChild(div);
   });
 }
 
-/* animate spin -> returns landed reward text */
+/* spin – returns landed reward */
 async function spinAndGetReward(){
-  const idx=Math.floor(Math.random()*10);                // 0-9
-  const stopRow=10+idx;                                  // land in 2nd cycle
-  const offset=stopRow*60;                               // tile height 60px
+  const idx=Math.floor(Math.random()*10);
+  const stop=10+idx;                              // land on 2nd cycle
+  const offset=stop*72;                           // tile height 72px
   const reel=document.getElementById('reel');
   reel.style.transition='transform 2.5s cubic-bezier(.25,.8,.4,1)';
   reel.style.transform=`translateY(-${offset}px)`;
@@ -139,7 +164,7 @@ async function spinAndGetReward(){
   return reelArr[idx];
 }
 
-/* RENDER CHECKLIST ------------------------------------------------ */
+/* render chores */
 async function render(){
   rewardDone=false;
   const load=document.getElementById('loading');
@@ -176,17 +201,15 @@ function updateUI(){
   document.getElementById('saveBtn').disabled = allDone && rewardDone;
 }
 
-/* SAVE ------------------------------------------------------------ */
+/* save */
 async function save(){
   const date=document.getElementById('date').value;
   const boxes=[...document.querySelectorAll('[data-c]')];
   const allDone=boxes.length && boxes.every(b=>b.checked);
-
   let reward='';
   if(allDone && !rewardDone){
-    reward = await spinAndGetReward();               // spin first!
+    reward=await spinAndGetReward();          // spin first
   }
-
   const list=boxes.map(cb=>({chore:cb.dataset.c,done:cb.checked}));
   const qs=new URLSearchParams({action:'save',date,payload:JSON.stringify(list),reward}).toString();
 
