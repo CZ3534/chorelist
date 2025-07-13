@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kid Chore Tracker</title>
 
-<!-- Tailwind CDN (fine for a personal project) -->
+<!-- Tailwind (CDN) -->
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-/* ── roulette wheel design ─────────────────────────── */
+/* — roulette wheel — */
 #wheel{width:260px;height:260px;border-radius:50%;border:8px solid #444;position:relative;margin:auto}
 .slice{position:absolute;width:50%;height:50%;transform-origin:100% 100%;clip-path:polygon(0 0,100% 0,100% 100%)}
 .slice span{position:absolute;top:35%;left:55%;transform:translate(-50%,-50%) rotateZ(-90deg);font-size:.8rem;font-weight:bold;white-space:nowrap}
@@ -25,14 +25,15 @@
 <label class="block text-sm mb-1" for="date">Choose date</label>
 <input id="date" type="date" class="w-full p-2 rounded text-gray-900" />
 
-<!-- checklist placeholder -->
+<!-- checklist goes here -->
 <div id="listArea" class="mt-4"></div>
 
-<!-- tiny spinner -->
+<!-- loading spinner -->
 <div id="loading" class="flex items-center justify-center mt-4">
   <svg class="animate-spin h-6 w-6 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+    <path class="opacity-75" fill="currentColor"
+          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
   </svg>
   <span class="ml-2 text-sm text-gray-400">Loading chores…</span>
 </div>
@@ -52,23 +53,31 @@
 </div>
 
 <script>
-/* ── configuration ─────────────────────────────────── */
-const ENDPOINT  = 'https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';           // <-- replace
+/* — settings — */
+const ENDPOINT  = 'https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';          // <-- paste your /exec URL
 const wheelConf = ['₱1','₱1','₱1','₱1','₱1','₱1','₱1','₱2','₱2','30 min watching'];
 
 let choresCache = [];
 
-/* ── bootstrap ─────────────────────────────────────── */
+/* — bootstrap — */
 document.addEventListener('DOMContentLoaded', async () => {
+  /* show spinner immediately (Option A) */
+  document.getElementById('loading').style.display = 'flex';
+
   await loadChores();
-  document.getElementById('date').valueAsNumber = Date.now() - (new Date()).getTimezoneOffset()*60000;
+
+  /* default date = today */
+  document.getElementById('date').valueAsNumber =
+     Date.now() - (new Date()).getTimezoneOffset()*60000;
+
   document.getElementById('date').addEventListener('change', renderChecklist);
   document.getElementById('saveBtn').addEventListener('click', saveData);
+
   setupWheel();
-  renderChecklist();
+  renderChecklist();   // spinner is hidden inside this function once data arrive
 });
 
-/* ── network ------------------------------------------------ */
+/* — sheet calls — */
 async function loadChores(){
   const res  = await fetch(`${ENDPOINT}?action=chores`);
   const data = await res.json();
@@ -86,14 +95,15 @@ async function postLog(date,list,reward){
   });
 }
 
-/* ── ui helpers --------------------------------------------- */
+/* — checklist render — */
 async function renderChecklist(){
-  /* show spinner */
   document.getElementById('loading').style.display='flex';
   document.getElementById('listArea').innerHTML='';
-  const date   = document.getElementById('date').value;
-  const rows   = await loadLog(date);
-  const done   = new Set(rows.filter(r=>r[2]==='TRUE').map(r=>r[1]));
+
+  const date = document.getElementById('date').value;
+  const rows = await loadLog(date);
+  const done = new Set(rows.filter(r=>r[2]==='TRUE').map(r=>r[1]));
+
   const html = `<table class="w-full border border-gray-700 text-sm">
       <tbody>
         ${choresCache.map(c=>`
@@ -106,26 +116,30 @@ async function renderChecklist(){
       </tbody>
     </table>`;
   document.getElementById('listArea').innerHTML = html;
+
   /* hide spinner */
   document.getElementById('loading').style.display='none';
 }
 
+/* — save & reward — */
 async function saveData(){
-  const date  = document.getElementById('date').value;
-  const list  = [...document.querySelectorAll('[data-chore]')].map(cb=>({chore:cb.dataset.chore, done:cb.checked}));
+  const date = document.getElementById('date').value;
+  const list = [...document.querySelectorAll('[data-chore]')]
+               .map(cb=>({chore:cb.dataset.chore, done:cb.checked}));
   const allDone = list.every(i=>i.done);
   const reward  = allDone ? spinWheel() : '';
 
   await postLog(date,list,reward);
+
   document.getElementById('resultArea').innerHTML =
     `<p class="text-lg font-semibold">Saved for ${date}.</p>` +
-    (reward ? `<p class="text-xl mt-2">🎉 Reward: <span class="font-bold text-amber-400">${reward}</span></p>` :
-               '<p>Keep going to earn today’s reward!</p>');
+    (reward ? `<p class="text-xl mt-2">🎉 Reward: <span class="font-bold text-amber-400">${reward}</span></p>`
+             : '<p>Keep going to earn today’s reward!</p>');
 
   if(reward) document.getElementById('rouletteArea').classList.add('hidden');
 }
 
-/* ── roulette ------------------------------------------------ */
+/* — roulette — */
 function setupWheel(){
   const wheel = document.getElementById('wheel');
   wheelConf.forEach((t,i)=>{
@@ -141,15 +155,15 @@ function setupWheel(){
 function spinWheel(show=false){
   const idx = Math.floor(Math.random()*10);
   if(show){
-    const wheel=document.getElementById('wheel');
     const deg = 360*5 + idx*36 + 18;
+    const wheel=document.getElementById('wheel');
     wheel.style.transition='transform 4s cubic-bezier(0.33,1,0.68,1)';
     wheel.style.transform=`rotate(${deg}deg)`;
   }
   return wheelConf[idx];
 }
 
-/* show/hide roulette button based on checkbox state */
+/* — show roulette only when all boxes checked — */
 document.addEventListener('change',()=>{
   const boxes=[...document.querySelectorAll('[data-chore]')];
   const allDone = boxes.length && boxes.every(b=>b.checked);
