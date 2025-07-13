@@ -12,44 +12,41 @@ tailwind.config={theme:{extend:{fontFamily:{sans:['Poppins','sans-serif']}}}};
 </script>
 
 <style>
-/* slot-machine cabinet (unchanged – keep full block) */
+/* ── slot-machine cabinet (unchanged) ───────────────────────── */
 .slot-cabinet{width:260px;padding:20px;border-radius:20px;position:relative;
   border:6px solid #777;background:linear-gradient(145deg,#4b5563,#1f2937);
   box-shadow:inset 0 0 8px #000,0 8px 12px rgba(0,0,0,.6)}
-/* … rest of slot CSS identical to previous version … */
+.bulb-row{display:flex;gap:6px;justify-content:center;margin-bottom:16px}
+.bulb{width:12px;height:12px;border-radius:50%;
+      background:radial-gradient(#fde68a,#ca8a04 60%,#1f2937)}
+#reelFrame{width:220px;height:72px;overflow:hidden;margin:auto;border-radius:12px;
+  border:4px solid #111;box-shadow:inset 0 0 6px #000;background:#000}
+#reel{display:flex;flex-direction:column}
+.tile{height:72px;display:flex;align-items:center;justify-content:center;
+  font-size:1.5rem;font-weight:600;color:#fff}
+.tile:nth-child(odd){background:#0ea5e9}
+.tile:nth-child(even){background:#22c55e}
+.lever{position:absolute;right:-34px;top:50%;transform:translateY(-50%);
+  width:18px;height:80px;background:linear-gradient(#9ca3af,#4b5563);
+  border-radius:10px;border:3px solid #777}
+.lever:after{content:'';position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);
+  width:30px;height:30px;border-radius:50%;background:#dc2626;border:4px solid #b91c1c;
+  box-shadow:0 0 4px #000}
+@media(max-width:420px){.slot-cabinet{transform:scale(.9)}}
 
-@keyframes jump {0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-60px) rotate(5deg)}}
-#cheer svg{width:140px;animation:jump .8s ease-out infinite}
+/* ── cheer overlay ─────────────────────────────────────────── */
+@keyframes jump{0%,100%{transform:translateY(0)}50%{transform:translateY(-60px)}}
+.kid-img{width:140px;animation:jump .8s ease-out infinite}
 </style>
 </head>
 
 <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col items-center p-4">
 
-<!-- cheering overlay -->
+<!-- jumping-kid overlay (place kid.png in same folder) -->
 <div id="cheer"
      class="fixed inset-0 flex items-center justify-center bg-black/20 pointer-events-none hidden">
-  <!-- kid SVG: head, smile, shirt, pants, arms & legs -->
-  <svg viewBox="0 0 64 80" stroke-linecap="round" stroke-linejoin="round" stroke-width="4">
-    <!-- head -->
-    <circle cx="32" cy="12" r="8" fill="#fde047" stroke="#fbbf24"/>
-    <path d="M28 10 q4 4 8 0" stroke="#f59e0b" fill="none"/>        <!-- hair curl -->
-    <path d="M29 15 q3 3 6 0" stroke="#ea580c" fill="none"/>        <!-- smile -->
-    <!-- shirt -->
-    <rect x="20" y="22" width="24" height="16" rx="4" fill="#3b82f6" stroke="#2563eb"/>
-    <!-- arms -->
-    <path d="M20 26 L10 20" stroke="#facc15"/>
-    <path d="M44 26 L54 20" stroke="#facc15"/>
-    <!-- pants -->
-    <rect x="24" y="38" width="16" height="12" rx="2" fill="#10b981" stroke="#059669"/>
-    <!-- legs -->
-    <path d="M28 50 L24 70" stroke="#facc15"/>
-    <path d="M36 50 L40 70" stroke="#facc15"/>
-  </svg>
+  <img src="kid.png" alt="Jumping Kid" class="kid-img">
 </div>
-
-<!-- ******* everything below is IDENTICAL to the previous full file ******* -->
-<!-- (kid selector, date picker, checklist, slot machine, JS)  -->
-<!--                ↓  keep whole body unchanged ↓                -->
 
 <div class="w-full max-w-lg">
   <h1 class="text-2xl font-semibold text-center mb-4">Chore Checklist</h1>
@@ -85,7 +82,6 @@ tailwind.config={theme:{extend:{fontFamily:{sans:['Poppins','sans-serif']}}}};
     <div id="listArea"></div>
   </div>
 
-  <!-- save -->
   <button id="saveBtn"
           class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 transition disabled:opacity-40">
     Save
@@ -107,7 +103,7 @@ tailwind.config={theme:{extend:{fontFamily:{sans:['Poppins','sans-serif']}}}};
 </div>
 
 <script>
-/* ENDPOINT */
+/* endpoint constant */
 const ENDPOINT='https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';
 const baseRewards=['₱1','₱1','₱1','₱1','₱1','₱1','₱1','₱2','₱2','30 mins watch'];
 
@@ -116,10 +112,8 @@ let chores=[],reelArr=[],rewardDone=false;
 /* helpers */
 const shuffle=a=>a.sort(()=>Math.random()-0.5);
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
-function showCheer(){const ch=document.getElementById('cheer');
-  ch.classList.remove('hidden'); setTimeout(()=>ch.classList.add('hidden'),2000);}
-
-/* badge */
+function showCheer(){const c=document.getElementById('cheer');
+  c.classList.remove('hidden'); setTimeout(()=>c.classList.add('hidden'),2000);}
 function updateDay(d){document.getElementById('dayBadge').textContent=
   new Date(d).toLocaleDateString('en-US',{weekday:'long'});}
 
@@ -139,13 +133,12 @@ document.addEventListener('DOMContentLoaded',async()=>{
   await loadChores(); buildReel(); render();
 });
 
-/* load chores */
+/* data loaders */
 async function loadChores(){
   const kid=document.getElementById('kid').value;
   chores=(await fetch(`${ENDPOINT}?action=chores&kid=${encodeURIComponent(kid)}`).then(r=>r.json())).chores||[];
 }
-
-/* reel */
+/* build reel */
 function buildReel(){
   reelArr=shuffle(baseRewards.slice());
   const reel=document.getElementById('reel'); reel.innerHTML='';
@@ -160,12 +153,9 @@ async function spinAndGetReward(){
   reel.style.transform=`translateY(-${offset}px)`; await wait(5000); return reelArr[idx];
 }
 
-/* attach cheer handler */
-function attachCheer(){
-  document.querySelectorAll('[data-c]').forEach(cb=>{
-    cb.onchange=e=>{ if(e.target.checked && !rewardDone) showCheer(); };
-  });
-}
+/* cheer hooks */
+function attachCheer(){document.querySelectorAll('[data-c]').forEach(cb=>{
+  cb.onchange=e=>{if(e.target.checked&&!rewardDone) showCheer();};});}
 
 /* render */
 async function render(){
@@ -198,7 +188,7 @@ async function render(){
   attachCheer(); updateUI();
 }
 
-/* UI */
+/* UI updates */
 function disableTicks(d){document.querySelectorAll('[data-c]').forEach(cb=>cb.disabled=d);}
 function updateUI(){
   const boxes=[...document.querySelectorAll('[data-c]')];
@@ -213,10 +203,8 @@ function updateUI(){
 async function save(){
   const date=document.getElementById('date').value, kid=document.getElementById('kid').value;
   const boxes=[...document.querySelectorAll('[data-c]')];
-  const allDone=boxes.length && boxes.every(b=>b.checked);
-  let reward='';
-  if(allDone&&!rewardDone) reward=await spinAndGetReward();
-
+  const allDone=boxes.length&&boxes.every(b=>b.checked);
+  let reward=''; if(allDone&&!rewardDone) reward=await spinAndGetReward();
   const list=boxes.map(cb=>({chore:cb.dataset.c,done:cb.checked}));
   const qs=new URLSearchParams({action:'save',date,kid,payload:JSON.stringify(list),reward}).toString();
 
@@ -227,4 +215,5 @@ async function save(){
   render();
 }
 </script>
-</body></html>
+</body>
+</html>
