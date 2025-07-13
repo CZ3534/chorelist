@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kid Chore Tracker</title>
 
-<!-- Poppins font & Tailwind -->
+<!-- Poppins & Tailwind -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Poppins','sans-serif']}}}}</script>
 
 <style>
-/* roulette visuals */
+/* roulette */
 #wheel{width:260px;height:260px;margin:auto;border-radius:50%;border:8px solid #334;
        background:conic-gradient(#0ea5e9 0 36deg,#22c55e 36deg 72deg,#facc15 72deg 108deg,
                                  #ef4444 108deg 144deg,#0ea5e9 144deg 180deg,#22c55e 180deg 216deg,
@@ -33,7 +33,7 @@
 </style>
 </head>
 
-<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col items-center p-4">
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col items-center p-4 overflow-x-hidden">
 
 <!-- card -->
 <div class="w-full max-w-lg">
@@ -75,87 +75,104 @@
 
 <script>
 /* CONFIG */
-const ENDPOINT='https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';                 // ← paste /exec URL
-const rewards  = ['₱1','₱1','₱1','₱1','₱1','₱1','₱1','₱2','₱2','30 mins watch'];
-let   wheelArr = [];                                   // shuffled each load
-let   chores   = [];
+const ENDPOINT='https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';      // ← paste your /exec URL
+const rewardsBase=['₱1','₱1','₱1','₱1','₱1','₱1','₱1','₱2','₱2','30 mins watch'];
 
-/* BOOTSTRAP */
+let chores=[], wheelArr=[], rewardAssigned=false;
+
+/* shuffle helper */
+const shuffle=a=>a.sort(()=>Math.random()-0.5);
+
+/* bootstrap */
 document.addEventListener('DOMContentLoaded', async()=>{
-  // shuffle rewards
-  wheelArr = rewards.slice().sort(()=>Math.random()-0.5);
-  buildWheel(wheelArr);
+  wheelArr=shuffle(rewardsBase.slice());
+  buildWheel();
 
-  // default date = today
-  document.getElementById('date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('date').addEventListener('change',render);
+  document.getElementById('saveBtn').addEventListener('click',save);
+  document.addEventListener('change',updateUI);
 
-  document.getElementById('date').addEventListener('change', render);
-  document.getElementById('saveBtn').addEventListener('click', save);
-  document.addEventListener('change', updateUI);
-
-  chores = (await fetch(`${ENDPOINT}?action=chores`).then(r=>r.json())).chores || [];
+  chores=(await fetch(`${ENDPOINT}?action=chores`).then(r=>r.json())).chores||[];
   render();
 });
 
-/* BUILD WHEEL LABELS */
-function buildWheel(arr){
-  const wheel=document.getElementById('wheel');
-  wheel.innerHTML='';               // clear any existing
-  arr.forEach((txt,i)=>{
+/* build wheel labels */
+function buildWheel(){
+  const w=document.getElementById('wheel');
+  w.innerHTML='';
+  wheelArr.forEach((t,i)=>{
     const span=document.createElement('span');
-    span.className='label'+(i===9?' text-xs':'');
-    span.textContent=txt;
-    wheel.appendChild(span);
+    span.className='label'+(t.includes('watch')?' text-xs':'');
+    span.textContent=t;
+    w.appendChild(span);
   });
 }
 
-/* RENDER CHECKLIST */
+/* render list */
 async function render(){
-  const load   = document.getElementById('loading');
-  const listEl = document.getElementById('listArea');
+  const load=document.getElementById('loading');
+  const listEl=document.getElementById('listArea');
   load.classList.remove('hidden');
   listEl.innerHTML='';
+  rewardAssigned=false;
 
-  try{
-    const date=document.getElementById('date').value;
-    const data=await fetch(`${ENDPOINT}?action=log&date=${date}`).then(r=>r.json());
-    const rows=Array.isArray(data.rows)?data.rows:[];
-    const doneSet=new Set(rows.filter(r=>String(r[2]).toLowerCase()==='true').map(r=>r[1]));
-
-    listEl.innerHTML=chores.map(c=>`
-      <label class="flex items-center py-2">
-        <input type="checkbox" data-c="${c}" ${doneSet.has(c)?'checked':''}
-               class="accent-emerald-500 w-5 h-5 mr-3 rounded focus:ring-0">
-        <span class="text-sm">${c}</span>
-      </label>`).join('');
-  }catch(err){
-    listEl.innerHTML=`<p class="text-red-400">Error: ${err.message}</p>`;
-    console.error(err);
-  }finally{
-    load.classList.add('hidden');
-    updateUI();
+  const date=document.getElementById('date').value;
+  const data=await fetch(`${ENDPOINT}?action=log&date=${date}`).then(r=>r.json());
+  const rows=Array.isArray(data.rows)?data.rows:[];
+  const doneSet=new Set(rows.filter(r=>String(r[2]).toLowerCase()==='true').map(r=>r[1]));
+  const rewardRow=rows.find(r=>r[3]);
+  if(rewardRow){                                     // reward already saved
+    rewardAssigned=true;
+    document.getElementById('resultArea').innerHTML=
+      `<p class="text-yellow-300 font-semibold text-xl">🎁 ${rewardRow[3]}</p>`;
+  }else{
+    document.getElementById('resultArea').innerHTML='';
   }
+
+  listEl.innerHTML=chores.map(c=>`
+    <label class="flex items-center py-2">
+      <input type="checkbox" data-c="${c}" ${doneSet.has(c)?'checked':''}
+             class="accent-emerald-500 w-5 h-5 mr-3 rounded focus:ring-0">
+      <span class="text-sm">${c}</span>
+    </label>`).join('');
+
+  load.classList.add('hidden');
+  updateUI();
 }
 
-/* UPDATE PROGRESS + ROULETTE VISIBILITY */
+/* update progress & button state */
 function updateUI(){
   const boxes=[...document.querySelectorAll('[data-c]')];
   const checked=boxes.filter(b=>b.checked).length;
+  const allDone=boxes.length && checked===boxes.length;
+
   document.getElementById('progress').style.width=
       boxes.length?`${(checked/boxes.length)*100}%`:'0';
+
   document.getElementById('rouletteArea')
-          .classList.toggle('hidden',checked!==boxes.length);
+          .classList.toggle('hidden', !allDone || rewardAssigned);
+
+  document.getElementById('saveBtn').disabled =
+      (allDone && rewardAssigned);         // disable if reward already given
 }
 
-/* SAVE + AUTO-SPIN */
+/* save / spin */
 async function save(){
-  const date=document.getElementById('date').value;
-  const list=[...document.querySelectorAll('[data-c]')].map(cb=>({chore:cb.dataset.c,done:cb.checked}));
-  const allDone=list.every(i=>i.done);
-  const idx=Math.floor(Math.random()*10);
-  const reward=allDone? wheelArr[idx] : '';
+  const boxes=[...document.querySelectorAll('[data-c]')];
+  const allDone=boxes.length && boxes.every(b=>b.checked);
 
-  // GET save (no CORS headache)
+  let reward='';
+
+  if(allDone && !rewardAssigned){
+    const idx=Math.floor(Math.random()*10);
+    reward=wheelArr[idx];
+    spin(idx);
+    await wait(4000);                      // wait for spin animation
+  }
+
+  const date=document.getElementById('date').value;
+  const list=boxes.map(cb=>({chore:cb.dataset.c,done:cb.checked}));
   const qs=new URLSearchParams({
     action:'save',date,
     payload:JSON.stringify(list),
@@ -166,25 +183,17 @@ async function save(){
   await fetch(`${ENDPOINT}?${qs}`).then(r=>r.text());
   document.getElementById('saveBtn').disabled=false;
 
-  document.getElementById('resultArea').innerHTML=
-    `<p class="text-emerald-400 font-semibold">Saved!</p>`+
-    (reward?`<p class="text-xl mt-2">🎁 <span class="font-bold text-yellow-300">${reward}</span></p>`:'');
-
-  if(reward){
-    spin(idx);                                 // animate wheel
-    document.getElementById('rouletteArea').classList.add('hidden');
-  }
+  render(); // refresh UI (will disable if reward was saved)
 }
 
-/* ANIMATE WHEEL */
+/* wheel animation */
 function spin(idx){
   const w=document.getElementById('wheel');
-  w.style.transition='none';          // reset
-  w.style.transform='rotate(0deg)';
-  void w.offsetWidth;                 // force reflow
+  w.style.transition='none'; w.style.transform='rotate(0deg)'; void w.offsetWidth;
   w.style.transition='transform 4s cubic-bezier(.25,.8,.4,1)';
-  w.style.transform=`rotate(${360*4 + idx*36 + 18}deg)`;
+  w.style.transform=`rotate(${360*4+idx*36+18}deg)`;
 }
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
 </script>
 </body>
 </html>
