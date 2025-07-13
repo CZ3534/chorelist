@@ -83,7 +83,10 @@ async function render(){
   document.getElementById('loading').style.display='flex';
   const date=document.getElementById('date').value;
   const rows=await fetch(`${ENDPOINT}?action=log&date=${date}`).then(r=>r.json()).then(d=>d.rows||[]);
-  const done=new Set(rows.filter(r=>r[2]==='TRUE').map(r=>r[1]));
+  - const done = new Set(rows.filter(r => r[2] === 'TRUE').map(r => r[1]));
++ const done = new Set(rows.filter(r => String(r[2]).toLowerCase() === 'true')
++                          .map(r => r[1]));
+
   document.getElementById('listArea').innerHTML=
     `<table class="w-full border border-gray-700 text-sm">
        <tbody>${chores.map(c=>`<tr>
