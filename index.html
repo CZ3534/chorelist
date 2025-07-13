@@ -10,19 +10,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
-tailwind.config = {
-  theme:{ extend:{ fontFamily:{ sans:['Poppins','sans-serif'] } } }
-};
+tailwind.config={theme:{extend:{fontFamily:{sans:['Poppins','sans-serif']}}}};
 </script>
 
 <style>
-/* roulette wheel */
+/* roulette */
 #wheel{width:260px;height:260px;margin:auto;border-radius:50%;border:8px solid #334;
        background:conic-gradient(#0ea5e9 0 36deg,#22c55e 36deg 72deg,#facc15 72deg 108deg,
                                  #ef4444 108deg 144deg,#0ea5e9 144deg 180deg,#22c55e 180deg 216deg,
                                  #facc15 216deg 252deg,#ef4444 252deg 288deg,#0ea5e9 288deg 324deg,
                                  #c084fc 324deg 360deg);position:relative}
-.label{position:absolute;left:50%;top:50%;transform-origin:0 0;font-size:.85rem;font-weight:600;color:#fff;text-shadow:0 0 4px #000}
+.label{position:absolute;left:50%;top:50%;transform-origin:0 0;font-size:.9rem;font-weight:600;color:#fff;text-shadow:0 0 4px #000}
 .label:nth-child(1){transform:rotate(18deg)  translateX(72px) rotate(-18deg)}
 .label:nth-child(2){transform:rotate(54deg)  translateX(72px) rotate(-54deg)}
 .label:nth-child(3){transform:rotate(90deg)  translateX(72px) rotate(-90deg)}
@@ -39,24 +37,21 @@ tailwind.config = {
 
 <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col items-center p-4 overflow-x-hidden">
 
-<!-- main card -->
 <div class="w-full max-w-lg">
   <h1 class="text-2xl font-semibold text-center mb-4">Chore Checklist</h1>
 
-  <!-- date picker row -->
+  <!-- date + day badge -->
   <div class="flex items-end gap-3 mb-4">
     <div class="flex-1">
       <label class="block text-sm font-medium mb-1" for="date">Choose date</label>
       <input id="date" type="date"
              class="w-full rounded-lg px-3 py-2 text-gray-900 shadow-inner">
     </div>
-    <span id="dayBadge"
-          class="bg-gray-700 text-sm px-3 py-1 rounded-lg whitespace-nowrap">
-      <!-- JS fills day -->
-    </span>
+     <span id="dayBadge"
++       class="bg-gray-700 text-sm px-4 h-10 flex items-center rounded-lg whitespace-nowrap"></span>
   </div>
 
-  <!-- progress bar -->
+  <!-- progress -->
   <div class="w-full h-3 bg-gray-700 rounded-full mb-4 overflow-hidden">
     <div id="progress" class="h-3 bg-emerald-500 transition-all w-0"></div>
   </div>
@@ -64,17 +59,16 @@ tailwind.config = {
   <!-- list card -->
   <div class="bg-gray-800 rounded-xl shadow-lg p-4 mb-6">
     <div id="loading" class="flex items-center justify-center">
-      <svg class="animate-spin h-6 w-6 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <svg class="animate-spin h-7 w-7 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
         <path class="opacity-75" fill="currentColor"
               d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
       </svg>
-      <span class="ml-2 text-sm text-gray-400">Loading chores…</span>
+      <span class="ml-3 text-base text-gray-400">Loading chores…</span>
     </div>
     <div id="listArea"></div>
   </div>
 
-  <!-- save button -->
   <button id="saveBtn"
           class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 transition disabled:opacity-40">
     Save
@@ -90,44 +84,37 @@ tailwind.config = {
 </div>
 
 <script>
-/* ── CONFIG ──────────────────────────────── */
-const ENDPOINT  = 'https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';                // ← paste /exec URL
-const baseRewards = ['₱1','₱1','₱1','₱1','₱1','₱1','₱1','₱2','₱2','30 mins watch'];
+/* CONFIG */
+const ENDPOINT='https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';
+const baseRewards=['₱1','₱1','₱1','₱1','₱1','₱1','₱1','₱2','₱2','30m watch'];
+let chores=[],wheelArr=[],rewardDone=false;
 
-let chores      = [];
-let wheelArr    = [];
-let rewardDone  = false;
+/* helpers */
+const shuffle=a=>a.sort(()=>Math.random()-0.5);
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
 
-/* helper */
-const shuffle = a => a.sort(()=>Math.random()-0.5);
-
-/* default date + day badge */
-const todayISO = new Date().toISOString().split('T')[0];
-document.getElementById('date').value = todayISO;
+/* day badge */
+const todayISO=new Date().toISOString().split('T')[0];
+document.getElementById('date').value=todayISO;
 updateDayBadge(todayISO);
+function updateDayBadge(iso){
+  document.getElementById('dayBadge').textContent=
+      new Date(iso).toLocaleDateString('en-US',{weekday:'long'});
+}
 
 /* bootstrap */
-document.addEventListener('DOMContentLoaded', async()=>{
-  wheelArr = shuffle(baseRewards.slice());   // fresh shuffle
-  buildWheel();
-
-  document.getElementById('date').addEventListener('change', e=>{
-    updateDayBadge(e.target.value);
-    render();
+document.addEventListener('DOMContentLoaded',async()=>{
+  wheelArr=shuffle(baseRewards.slice()); buildWheel();
+  document.getElementById('date').addEventListener('change',e=>{
+    updateDayBadge(e.target.value); render();
   });
-  document.getElementById('saveBtn').addEventListener('click', save);
-  document.addEventListener('change', updateUI);
-
-  // load chores
-  chores = (await fetch(`${ENDPOINT}?action=chores`).then(r=>r.json())).chores || [];
+  document.getElementById('saveBtn').addEventListener('click',save);
+  document.addEventListener('change',updateUI);
+  chores=(await fetch(`${ENDPOINT}?action=chores`).then(r=>r.json())).chores||[];
   render();
 });
 
-/* ---------- UI helpers ---------- */
-function updateDayBadge(iso){
-  const day = new Date(iso).toLocaleDateString('en-US',{ weekday:'long' });
-  document.getElementById('dayBadge').textContent = day;
-}
+/* wheel */
 function buildWheel(){
   const w=document.getElementById('wheel'); w.innerHTML='';
   wheelArr.forEach((t,i)=>{
@@ -140,11 +127,10 @@ function spin(idx){
   const w=document.getElementById('wheel');
   w.style.transition='none'; w.style.transform='rotate(0deg)'; void w.offsetWidth;
   w.style.transition='transform 4s cubic-bezier(.25,.8,.4,1)';
-  w.style.transform=`rotate(${360*4 + idx*36 + 18}deg)`;
+  w.style.transform=`rotate(${360*4+idx*36+18}deg)`;
 }
-const wait = ms => new Promise(r=>setTimeout(r,ms));
 
-/* ---------- RENDER CHECKLIST ---------- */
+/* render checklist */
 async function render(){
   rewardDone=false;
   const load=document.getElementById('loading');
@@ -156,24 +142,22 @@ async function render(){
   const rows=Array.isArray(data.rows)?data.rows:[];
   const doneSet=new Set(rows.filter(r=>String(r[2]).toLowerCase()==='true').map(r=>r[1]));
   const rewardRow=rows.find(r=>r[3]);
-  if(rewardRow){
-    rewardDone=true;
-    document.getElementById('resultArea').innerHTML=
-      `<p class="text-yellow-300 font-semibold text-xl">🎁 ${rewardRow[3]}</p>`;
-  }else{
-    document.getElementById('resultArea').innerHTML='';
-  }
+  document.getElementById('resultArea').innerHTML=
+      rewardRow?`<p class="text-yellow-300 font-bold text-xl">🎁 ${rewardRow[3]}</p>`:'';
+  rewardDone=!!rewardRow;
 
   listEl.innerHTML=chores.map(c=>`
-    <label class="flex items-center py-2">
+    <label class="flex items-center py-3">
       <input type="checkbox" data-c="${c}" ${doneSet.has(c)?'checked':''}
-             class="accent-emerald-500 w-5 h-5 mr-3 rounded focus:ring-0">
-      <span class="text-sm">${c}</span>
+             class="accent-emerald-500 w-7 h-7 mr-4 rounded focus:ring-0">
+      <span class="text-lg">${c}</span>
     </label>`).join('');
 
   load.classList.add('hidden');
   updateUI();
 }
+
+/* UI state */
 function updateUI(){
   const boxes=[...document.querySelectorAll('[data-c]')];
   const checked=boxes.filter(b=>b.checked).length;
@@ -181,36 +165,30 @@ function updateUI(){
   document.getElementById('progress').style.width=
       boxes.length?`${(checked/boxes.length)*100}%`:'0';
   document.getElementById('rouletteArea')
-          .classList.toggle('hidden', !allDone || rewardDone);
+          .classList.toggle('hidden',!allDone || rewardDone);
   document.getElementById('saveBtn').disabled = allDone && rewardDone;
 }
 
-/* ---------- SAVE ---------- */
+/* save */
 async function save(){
+  const date=document.getElementById('date').value;
   const boxes=[...document.querySelectorAll('[data-c]')];
   const allDone=boxes.length && boxes.every(b=>b.checked);
-  const date=document.getElementById('date').value;
-
   let reward='';
+
   if(allDone && !rewardDone){
     const idx=Math.floor(Math.random()*10);
-    reward=wheelArr[idx];
-    spin(idx);
-    await wait(4000);    // let the wheel finish
+    reward=wheelArr[idx]; spin(idx); await wait(4000);
   }
 
   const list=boxes.map(cb=>({chore:cb.dataset.c,done:cb.checked}));
-  const qs=new URLSearchParams({
-    action:'save',date,
-    payload:JSON.stringify(list),
-    reward
-  }).toString();
+  const qs=new URLSearchParams({action:'save',date,payload:JSON.stringify(list),reward}).toString();
 
   document.getElementById('saveBtn').disabled=true;
   await fetch(`${ENDPOINT}?${qs}`).then(r=>r.text());
   document.getElementById('saveBtn').disabled=false;
 
-  render();   // refresh UI, will disable Save if reward saved
+  render();
 }
 </script>
 </body>
