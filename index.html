@@ -75,9 +75,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // fetch chore names
   chores = (await fetch(`${ENDPOINT}?action=chores`).then(r=>r.json())).chores || [];
 
-  // default date = today
-  document.getElementById('date').valueAsNumber =
-    Date.now() - (new Date()).getTimezoneOffset()*60000;
+  /* default date = today in yyyy-MM-dd (what <input type="date"> expects) */
+const todayISO = new Date().toISOString().split('T')[0]; // "2025-07-13"
+document.getElementById('date').value = todayISO;
+
 
   document.getElementById('date')    .addEventListener('change', renderChecklist);
   document.getElementById('saveBtn') .addEventListener('click', saveData);
