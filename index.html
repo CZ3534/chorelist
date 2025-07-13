@@ -98,7 +98,10 @@ async function renderChecklist() {
     const date = document.getElementById('date').value;
     if (!date) throw new Error('Pick a date first.');
 
-    const rows = await fetch(`${ENDPOINT}?action=log&date=${date}`).then(r=>r.json());
+    // NEW (safe)
+const data = await fetch(`${ENDPOINT}?action=log&date=${date}`).then(r=>r.json());
+if (data.error) throw new Error(data.error);         // e.g. Invalid request
+const rows = Array.isArray(data.rows) ? data.rows : [];
     const done = new Set(rows.filter(r=>String(r[2]).toLowerCase()==='true').map(r=>r[1]));
 
     listEl.innerHTML =
