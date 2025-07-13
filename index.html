@@ -5,16 +5,36 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kid Chore Tracker</title>
 
-<!-- Tailwind (CDN) -->
+<!-- Tailwind -->
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-/* — roulette wheel — */
-#wheel{width:260px;height:260px;border-radius:50%;border:8px solid #444;position:relative;margin:auto}
-.slice{position:absolute;width:50%;height:50%;transform-origin:100% 100%;clip-path:polygon(0 0,100% 0,100% 100%)}
-.slice span{position:absolute;top:35%;left:55%;transform:translate(-50%,-50%) rotateZ(-90deg);font-size:.8rem;font-weight:bold;white-space:nowrap}
+/* ── roulette wheel ── */
+#wheel{
+  width:260px;height:260px;border-radius:50%;
+  border:8px solid #444;margin:auto;position:relative;
+  background:conic-gradient(#1e40af 0deg 36deg,#2563eb 36deg 72deg,
+                            #1e40af 72deg 108deg,#2563eb 108deg 144deg,
+                            #1e40af 144deg 180deg,#2563eb 180deg 216deg,
+                            #1e40af 216deg 252deg,#2563eb 252deg 288deg,
+                            #1e40af 288deg 324deg,#2563eb 324deg 360deg);
+}
 #pointer{width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-bottom:25px solid #e11d48;margin:auto}
-@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(3600deg)}}
+.label{
+  position:absolute;left:50%;top:50%;transform-origin:0 0;font-size:.8rem;font-weight:bold;color:#fff;
+}
+/* place labels at mid-angle of each 36° slice */
+.label:nth-child(1){transform:rotate(18deg) translateX(70px) rotate(-18deg)}
+.label:nth-child(2){transform:rotate(54deg) translateX(70px) rotate(-54deg)}
+.label:nth-child(3){transform:rotate(90deg) translateX(70px) rotate(-90deg)}
+.label:nth-child(4){transform:rotate(126deg) translateX(70px) rotate(-126deg)}
+.label:nth-child(5){transform:rotate(162deg) translateX(70px) rotate(-162deg)}
+.label:nth-child(6){transform:rotate(198deg) translateX(70px) rotate(-198deg)}
+.label:nth-child(7){transform:rotate(234deg) translateX(70px) rotate(-234deg)}
+.label:nth-child(8){transform:rotate(270deg) translateX(70px) rotate(-270deg)}
+.label:nth-child(9){transform:rotate(306deg) translateX(70px) rotate(-306deg)}
+.label:nth-child(10){transform:rotate(342deg) translateX(70px) rotate(-342deg)}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 </style>
 </head>
 
@@ -25,10 +45,9 @@
 <label class="block text-sm mb-1" for="date">Choose date</label>
 <input id="date" type="date" class="w-full p-2 rounded text-gray-900" />
 
-<!-- checklist goes here -->
 <div id="listArea" class="mt-4"></div>
 
-<!-- loading spinner -->
+<!-- spinner -->
 <div id="loading" class="flex items-center justify-center mt-4">
   <svg class="animate-spin h-6 w-6 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -42,133 +61,107 @@
   Save &amp; Spin
 </button>
 
-<!-- results -->
 <div id="resultArea" class="mt-6"></div>
 
-<!-- roulette area -->
+<!-- roulette -->
 <div id="rouletteArea" class="hidden flex flex-col items-center gap-4">
   <div id="pointer"></div>
-  <div id="wheel"></div>
+  <div id="wheel">
+    <!-- text labels -->
+    <span class="label">₱1</span><span class="label">₱1</span><span class="label">₱1</span>
+    <span class="label">₱1</span><span class="label">₱1</span><span class="label">₱1</span>
+    <span class="label">₱1</span><span class="label">₱2</span><span class="label">₱2</span>
+    <span class="label text-[10px]">30&nbsp;min</span>
+  </div>
   <button id="spinBtn" class="bg-amber-500 text-gray-900 px-4 py-2 rounded">Spin!</button>
 </div>
 
 <script>
-/* — settings — */
-const ENDPOINT  = 'https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';          // <-- paste your /exec URL
-const wheelConf = ['₱1','₱1','₱1','₱1','₱1','₱1','₱1','₱2','₱2','30 min watching'];
+/* config */
+const ENDPOINT='https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';      // <-- paste your /exec link
+const wheelConf=['₱1','₱1','₱1','₱1','₱1','₱1','₱1','₱2','₱2','30 min watching'];
 
-let choresCache = [];
+let choresCache=[];
 
-/* — bootstrap — */
-document.addEventListener('DOMContentLoaded', async () => {
-  /* show spinner immediately (Option A) */
-  document.getElementById('loading').style.display = 'flex';
-
+/* bootstrap */
+document.addEventListener('DOMContentLoaded',async()=>{
+  document.getElementById('loading').style.display='flex';
   await loadChores();
-
-  /* default date = today */
-  document.getElementById('date').valueAsNumber =
-     Date.now() - (new Date()).getTimezoneOffset()*60000;
-
-  document.getElementById('date').addEventListener('change', renderChecklist);
-  document.getElementById('saveBtn').addEventListener('click', saveData);
-
-  setupWheel();
-  renderChecklist();   // spinner is hidden inside this function once data arrive
+  document.getElementById('date').valueAsNumber=Date.now()-(new Date()).getTimezoneOffset()*60000;
+  document.getElementById('date').addEventListener('change',renderChecklist);
+  document.getElementById('saveBtn').addEventListener('click',saveData);
+  document.getElementById('spinBtn').addEventListener('click',()=>spinWheel(true));
+  renderChecklist();
 });
 
-/* — sheet calls — */
+/* network */
 async function loadChores(){
-  const res  = await fetch(`${ENDPOINT}?action=chores`);
-  const data = await res.json();
-  choresCache = data.chores || [];
+  const r=await fetch(`${ENDPOINT}?action=chores`); choresCache=(await r.json()).chores||[];
 }
-async function loadLog(date){
-  const res = await fetch(`${ENDPOINT}?action=log&date=${date}`);
-  return (await res.json()).rows || [];
+async function loadLog(d){
+  const r=await fetch(`${ENDPOINT}?action=log&date=${d}`); return (await r.json()).rows||[];
 }
-async function postLog(date,list,reward){
-  await fetch(ENDPOINT,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({date, list, reward})
-  });
+async function postLog(d,l,reward){
+  const r=await fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:d,list:l,reward})});
+  if(!r.ok) throw new Error(await r.text());
 }
 
-/* — checklist render — */
+/* render */
 async function renderChecklist(){
   document.getElementById('loading').style.display='flex';
-  document.getElementById('listArea').innerHTML='';
-
-  const date = document.getElementById('date').value;
-  const rows = await loadLog(date);
-  const done = new Set(rows.filter(r=>r[2]==='TRUE').map(r=>r[1]));
-
-  const html = `<table class="w-full border border-gray-700 text-sm">
-      <tbody>
-        ${choresCache.map(c=>`
-          <tr>
-            <td class="p-2 border-b border-gray-700">${c}</td>
-            <td class="p-2 border-b border-gray-700 text-center">
-              <input type="checkbox" data-chore="${c}" ${done.has(c)?'checked':''}>
-            </td>
-          </tr>`).join('')}
-      </tbody>
-    </table>`;
-  document.getElementById('listArea').innerHTML = html;
-
-  /* hide spinner */
+  const d=document.getElementById('date').value;
+  const rows=await loadLog(d);
+  const done=new Set(rows.filter(r=>r[2]==='TRUE').map(r=>r[1]));
+  const html=`<table class="w-full border border-gray-700 text-sm">
+      <tbody>${choresCache.map(c=>`
+        <tr>
+          <td class="p-2 border-b border-gray-700">${c}</td>
+          <td class="p-2 border-b border-gray-700 text-center">
+            <input type="checkbox" data-chore="${c}" ${done.has(c)?'checked':''}>
+          </td>
+        </tr>`).join('')}
+      </tbody></table>`;
+  document.getElementById('listArea').innerHTML=html;
   document.getElementById('loading').style.display='none';
+  updateRouletteVisibility();
 }
 
-/* — save & reward — */
+/* save */
 async function saveData(){
-  const date = document.getElementById('date').value;
-  const list = [...document.querySelectorAll('[data-chore]')]
-               .map(cb=>({chore:cb.dataset.chore, done:cb.checked}));
-  const allDone = list.every(i=>i.done);
-  const reward  = allDone ? spinWheel() : '';
-
-  await postLog(date,list,reward);
-
-  document.getElementById('resultArea').innerHTML =
-    `<p class="text-lg font-semibold">Saved for ${date}.</p>` +
-    (reward ? `<p class="text-xl mt-2">🎉 Reward: <span class="font-bold text-amber-400">${reward}</span></p>`
-             : '<p>Keep going to earn today’s reward!</p>');
-
-  if(reward) document.getElementById('rouletteArea').classList.add('hidden');
+  try{
+    const d=document.getElementById('date').value;
+    const list=[...document.querySelectorAll('[data-chore]')].map(cb=>({chore:cb.dataset.chore,done:cb.checked}));
+    const allDone=list.every(i=>i.done);
+    const reward=allDone?spinWheel():'';                     // spin only once, no animation
+    document.getElementById('saveBtn').disabled=true;
+    await postLog(d,list,reward);
+    document.getElementById('saveBtn').disabled=false;
+    document.getElementById('resultArea').innerHTML=
+      `<p class="text-lg font-semibold">Saved.</p>`+
+      (reward?`<p class="text-xl mt-2">🎉 Reward: <span class="font-bold text-amber-400">${reward}</span></p>`:'');
+    if(reward) document.getElementById('rouletteArea').classList.add('hidden');
+  }catch(e){
+    alert('Error saving:\n'+e.message);
+    document.getElementById('saveBtn').disabled=false;
+  }
 }
 
-/* — roulette — */
-function setupWheel(){
-  const wheel = document.getElementById('wheel');
-  wheelConf.forEach((t,i)=>{
-    const slice = document.createElement('div');
-    slice.className='slice';
-    slice.style.transform=`rotate(${i*36}deg) skewY(-54deg)`;
-    slice.style.background = i%2? '#1e40af':'#2563eb';
-    slice.innerHTML=`<span style="transform:rotate(54deg)">${t}</span>`;
-    wheel.appendChild(slice);
-  });
-  document.getElementById('spinBtn').addEventListener('click',()=>spinWheel(true));
-}
+/* roulette helpers */
 function spinWheel(show=false){
-  const idx = Math.floor(Math.random()*10);
+  const idx=Math.floor(Math.random()*10);
   if(show){
-    const deg = 360*5 + idx*36 + 18;
     const wheel=document.getElementById('wheel');
-    wheel.style.transition='transform 4s cubic-bezier(0.33,1,0.68,1)';
-    wheel.style.transform=`rotate(${deg}deg)`;
+    wheel.style.transition='transform 4s cubic-bezier(.33,1,.68,1)';
+    wheel.style.transform=`rotate(${360*5+idx*36+18}deg)`;
   }
   return wheelConf[idx];
 }
-
-/* — show roulette only when all boxes checked — */
-document.addEventListener('change',()=>{
+function updateRouletteVisibility(){
   const boxes=[...document.querySelectorAll('[data-chore]')];
-  const allDone = boxes.length && boxes.every(b=>b.checked);
+  const allDone=boxes.length&&boxes.every(b=>b.checked);
   document.getElementById('rouletteArea').classList.toggle('hidden',!allDone);
-});
+}
+document.addEventListener('change',updateRouletteVisibility);
 </script>
 </body>
 </html>
