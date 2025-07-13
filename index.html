@@ -9,22 +9,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config = { theme:{ extend:{ fontFamily:{ sans:['Poppins', 'sans-serif'] }}}}</script>
+<script>tailwind.config={theme:{extend:{fontFamily:{sans:['Poppins','sans-serif']}}}}</script>
 
 <style>
-/* roulette */
-#wheel{
-  width:260px;height:260px;margin:auto;border-radius:50%;border:8px solid #334;
-  background:conic-gradient(#0ea5e9 0 36deg,#22c55e 36deg 72deg,#facc15 72deg 108deg,
-                            #ef4444 108deg 144deg,#0ea5e9 144deg 180deg,#22c55e 180deg 216deg,
-                            #facc15 216deg 252deg,#ef4444 252deg 288deg,#0ea5e9 288deg 324deg,
-                            #c084fc 324deg 360deg);
-  position:relative;
-}
-.label{
-  position:absolute;left:50%;top:50%;transform-origin:0 0;
-  font-size:.85rem;font-weight:600;color:#fff;text-shadow:0 0 4px #000;
-}
+/* roulette visuals */
+#wheel{width:260px;height:260px;margin:auto;border-radius:50%;border:8px solid #334;
+       background:conic-gradient(#0ea5e9 0 36deg,#22c55e 36deg 72deg,#facc15 72deg 108deg,
+                                 #ef4444 108deg 144deg,#0ea5e9 144deg 180deg,#22c55e 180deg 216deg,
+                                 #facc15 216deg 252deg,#ef4444 252deg 288deg,#0ea5e9 288deg 324deg,
+                                 #c084fc 324deg 360deg);position:relative}
+.label{position:absolute;left:50%;top:50%;transform-origin:0 0;font-size:.85rem;font-weight:600;color:#fff;text-shadow:0 0 4px #000}
 .label:nth-child(1){transform:rotate(18deg)  translateX(72px) rotate(-18deg)}
 .label:nth-child(2){transform:rotate(54deg)  translateX(72px) rotate(-54deg)}
 .label:nth-child(3){transform:rotate(90deg)  translateX(72px) rotate(-90deg)}
@@ -35,128 +29,136 @@
 .label:nth-child(8){transform:rotate(270deg) translateX(72px) rotate(-270deg)}
 .label:nth-child(9){transform:rotate(306deg) translateX(72px) rotate(-306deg)}
 .label:nth-child(10){transform:rotate(342deg) translateX(72px) rotate(-342deg)}
-
-#pointer{
-  width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;
-  border-bottom:28px solid #f43f5e;margin:auto;
-}
+#pointer{width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-bottom:28px solid #f43f5e;margin:auto}
 </style>
 </head>
 
 <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col items-center p-4">
 
-<!-- container card -->
+<!-- card -->
 <div class="w-full max-w-lg">
-
   <h1 class="text-2xl font-semibold text-center mb-4">Chore Checklist</h1>
 
-  <!-- date selector -->
   <label class="block text-sm font-medium mb-1" for="date">Choose date</label>
-  <input id="date" type="date"
-         class="w-full rounded-lg px-3 py-2 text-gray-900 mb-4 shadow-inner">
+  <input id="date" type="date" class="w-full rounded-lg px-3 py-2 text-gray-900 mb-4 shadow-inner">
 
-  <!-- progress bar -->
+  <!-- progress -->
   <div class="w-full h-3 bg-gray-700 rounded-full mb-4 overflow-hidden">
-    <div id="progress" class="h-3 bg-emerald-500 transition-all"></div>
+    <div id="progress" class="h-3 bg-emerald-500 transition-all w-0"></div>
   </div>
 
-  <!-- chore list card -->
+  <!-- list card -->
   <div id="listCard" class="bg-gray-800 rounded-xl shadow-lg p-4 mb-6">
-      <div id="loading" class="flex items-center justify-center">
-        <svg class="animate-spin h-6 w-6 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-          <path class="opacity-75" fill="currentColor"
-                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
-        </svg>
-        <span class="ml-2 text-sm text-gray-400">Loading chores…</span>
-      </div>
-      <div id="listArea"></div>
+    <div id="loading" class="flex items-center justify-center">
+      <svg class="animate-spin h-6 w-6 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+      </svg>
+      <span class="ml-2 text-sm text-gray-400">Loading chores…</span>
+    </div>
+    <div id="listArea"></div>
   </div>
 
-  <!-- save button -->
   <button id="saveBtn"
           class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 transition disabled:opacity-40">
-    Save &amp; Spin
+    Save
   </button>
 
-  <!-- result -->
   <div id="resultArea" class="text-center mt-4"></div>
 
   <!-- roulette -->
   <div id="rouletteArea" class="hidden flex flex-col items-center gap-4 mt-6">
-      <div id="pointer"></div>
-      <div id="wheel">
-        <span class="label">₱1</span><span class="label">₱1</span><span class="label">₱1</span>
-        <span class="label">₱1</span><span class="label">₱1</span><span class="label">₱1</span>
-        <span class="label">₱1</span><span class="label">₱2</span><span class="label">₱2</span>
-        <span class="label text-xs">30&nbsp;min</span>
-      </div>
-      <button id="spinBtn"
-              class="bg-yellow-400 hover:bg-yellow-300 transition text-gray-900 font-semibold px-6 py-2 rounded-lg shadow">
-        Spin!
-      </button>
+    <div id="pointer"></div>
+    <div id="wheel"></div>
   </div>
 </div>
 
-<!-- ── SCRIPT ----------------------------------------------------------- -->
 <script>
-const ENDPOINT = 'https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';      // ← paste /exec URL
-const wheelArr = ['₱1','₱1','₱1','₱1','₱1','₱1','₱1','₱2','₱2','30 min watching'];
-let chores = [];
+/* CONFIG */
+const ENDPOINT='https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';                 // ← paste /exec URL
+const rewards  = ['₱1','₱1','₱1','₱1','₱1','₱1','₱1','₱2','₱2','30 mins watch'];
+let   wheelArr = [];                                   // shuffled each load
+let   chores   = [];
 
-/* initialise */
-document.addEventListener('DOMContentLoaded', async () => {
+/* BOOTSTRAP */
+document.addEventListener('DOMContentLoaded', async()=>{
+  // shuffle rewards
+  wheelArr = rewards.slice().sort(()=>Math.random()-0.5);
+  buildWheel(wheelArr);
+
   // default date = today
   document.getElementById('date').value = new Date().toISOString().split('T')[0];
 
-  document.getElementById('date')   .addEventListener('change', render);
+  document.getElementById('date').addEventListener('change', render);
   document.getElementById('saveBtn').addEventListener('click', save);
-  document.getElementById('spinBtn').addEventListener('click', () => spin(true));
+  document.addEventListener('change', updateUI);
 
   chores = (await fetch(`${ENDPOINT}?action=chores`).then(r=>r.json())).chores || [];
   render();
 });
 
-/* render list & progress */
+/* BUILD WHEEL LABELS */
+function buildWheel(arr){
+  const wheel=document.getElementById('wheel');
+  wheel.innerHTML='';               // clear any existing
+  arr.forEach((txt,i)=>{
+    const span=document.createElement('span');
+    span.className='label'+(i===9?' text-xs':'');
+    span.textContent=txt;
+    wheel.appendChild(span);
+  });
+}
+
+/* RENDER CHECKLIST */
 async function render(){
   const load   = document.getElementById('loading');
   const listEl = document.getElementById('listArea');
   load.classList.remove('hidden');
-  listEl.innerHTML = '';
+  listEl.innerHTML='';
 
-  const date = document.getElementById('date').value;
-  const data = await fetch(`${ENDPOINT}?action=log&date=${date}`).then(r=>r.json());
-  const rows = Array.isArray(data.rows) ? data.rows : [];
-  const done = new Set(rows.filter(r=>String(r[2]).toLowerCase()==='true').map(r=>r[1]));
+  try{
+    const date=document.getElementById('date').value;
+    const data=await fetch(`${ENDPOINT}?action=log&date=${date}`).then(r=>r.json());
+    const rows=Array.isArray(data.rows)?data.rows:[];
+    const doneSet=new Set(rows.filter(r=>String(r[2]).toLowerCase()==='true').map(r=>r[1]));
 
-  listEl.innerHTML =
-    chores.map(c=>`
+    listEl.innerHTML=chores.map(c=>`
       <label class="flex items-center py-2">
-        <input type="checkbox" data-c="${c}" ${done.has(c)?'checked':''}
+        <input type="checkbox" data-c="${c}" ${doneSet.has(c)?'checked':''}
                class="accent-emerald-500 w-5 h-5 mr-3 rounded focus:ring-0">
         <span class="text-sm">${c}</span>
       </label>`).join('');
-
-  load.classList.add('hidden');
-  updateUI();
+  }catch(err){
+    listEl.innerHTML=`<p class="text-red-400">Error: ${err.message}</p>`;
+    console.error(err);
+  }finally{
+    load.classList.add('hidden');
+    updateUI();
+  }
 }
+
+/* UPDATE PROGRESS + ROULETTE VISIBILITY */
 function updateUI(){
   const boxes=[...document.querySelectorAll('[data-c]')];
-  const checked = boxes.filter(b=>b.checked).length;
-  document.getElementById('progress').style.width =
-      boxes.length? `${(checked/boxes.length)*100}%` : '0';
-  document.getElementById('rouletteArea').classList.toggle('hidden', checked!==boxes.length);
+  const checked=boxes.filter(b=>b.checked).length;
+  document.getElementById('progress').style.width=
+      boxes.length?`${(checked/boxes.length)*100}%`:'0';
+  document.getElementById('rouletteArea')
+          .classList.toggle('hidden',checked!==boxes.length);
 }
 
-/* save */
+/* SAVE + AUTO-SPIN */
 async function save(){
   const date=document.getElementById('date').value;
   const list=[...document.querySelectorAll('[data-c]')].map(cb=>({chore:cb.dataset.c,done:cb.checked}));
   const allDone=list.every(i=>i.done);
-  const reward = allDone ? spin() : '';
-  const qs = new URLSearchParams({
-    action:'save', date,
-    payload: JSON.stringify(list),
+  const idx=Math.floor(Math.random()*10);
+  const reward=allDone? wheelArr[idx] : '';
+
+  // GET save (no CORS headache)
+  const qs=new URLSearchParams({
+    action:'save',date,
+    payload:JSON.stringify(list),
     reward
   }).toString();
 
@@ -165,23 +167,24 @@ async function save(){
   document.getElementById('saveBtn').disabled=false;
 
   document.getElementById('resultArea').innerHTML=
-    `<p class="text-green-400 font-semibold">Saved!</p>` +
-    (reward? `<p class="text-xl mt-2">🎁 &nbsp;<span class="font-bold text-yellow-300">${reward}</span></p>` : '');
+    `<p class="text-emerald-400 font-semibold">Saved!</p>`+
+    (reward?`<p class="text-xl mt-2">🎁 <span class="font-bold text-yellow-300">${reward}</span></p>`:'');
 
-  if(reward) document.getElementById('rouletteArea').classList.add('hidden');
-}
-
-/* roulette */
-function spin(show=false){
-  const idx = Math.floor(Math.random()*10);
-  if(show){
-    const w=document.getElementById('wheel');
-    w.style.transition='transform 4s cubic-bezier(.25,.8,.4,1)';
-    w.style.transform=`rotate(${360*4 + idx*36 + 18}deg)`;
+  if(reward){
+    spin(idx);                                 // animate wheel
+    document.getElementById('rouletteArea').classList.add('hidden');
   }
-  return wheelArr[idx];
 }
-document.addEventListener('change', updateUI);
+
+/* ANIMATE WHEEL */
+function spin(idx){
+  const w=document.getElementById('wheel');
+  w.style.transition='none';          // reset
+  w.style.transform='rotate(0deg)';
+  void w.offsetWidth;                 // force reflow
+  w.style.transition='transform 4s cubic-bezier(.25,.8,.4,1)';
+  w.style.transform=`rotate(${360*4 + idx*36 + 18}deg)`;
+}
 </script>
 </body>
 </html>
