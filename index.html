@@ -5,60 +5,66 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kid Chore Tracker</title>
 
-<!-- font + Tailwind -->
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
-tailwind.config = { theme:{ extend:{ fontFamily:{ sans:['Poppins','sans-serif'] } } } };
+tailwind.config={theme:{extend:{fontFamily:{sans:['Poppins','sans-serif']}}}};
 </script>
 
 <style>
-/* ───── slot-machine cabinet ───── */
-.slot-cabinet{
-  width:260px;padding:20px;border-radius:20px;position:relative;
+/* slot-machine cabinet  (unchanged) */
+.slot-cabinet{width:260px;padding:20px;border-radius:20px;position:relative;
   border:6px solid #777;background:linear-gradient(145deg,#4b5563,#1f2937);
-  box-shadow:inset 0 0 8px #000,0 8px 12px rgba(0,0,0,.6)
-}
+  box-shadow:inset 0 0 8px #000,0 8px 12px rgba(0,0,0,.6)}
 .bulb-row{display:flex;gap:6px;justify-content:center;margin-bottom:16px}
 .bulb{width:12px;height:12px;border-radius:50%;
       background:radial-gradient(#fde68a,#ca8a04 60%,#1f2937)}
-#reelFrame{
-  width:220px;height:72px;overflow:hidden;margin:auto;border-radius:12px;
-  border:4px solid #111;box-shadow:inset 0 0 6px #000;background:#000
-}
+#reelFrame{width:220px;height:72px;overflow:hidden;margin:auto;border-radius:12px;
+  border:4px solid #111;box-shadow:inset 0 0 6px #000;background:#000}
 #reel{display:flex;flex-direction:column}
-.tile{
-  height:72px;display:flex;align-items:center;justify-content:center;
+.tile{height:72px;display:flex;align-items:center;justify-content:center;
   font-size:1.5rem;font-weight:600;color:#fff}
 .tile:nth-child(odd){background:#0ea5e9}
 .tile:nth-child(even){background:#22c55e}
-.lever{
-  position:absolute;right:-34px;top:50%;transform:translateY(-50%);
+.lever{position:absolute;right:-34px;top:50%;transform:translateY(-50%);
   width:18px;height:80px;background:linear-gradient(#9ca3af,#4b5563);
   border-radius:10px;border:3px solid #777}
-.lever:after{
-  content:'';position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);
+.lever:after{content:'';position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);
   width:30px;height:30px;border-radius:50%;background:#dc2626;border:4px solid #b91c1c;
   box-shadow:0 0 4px #000}
 @media(max-width:420px){.slot-cabinet{transform:scale(.9)}}
+
+/* cheer overlay */
+@keyframes jump{0%,100%{transform:translateY(0)}50%{transform:translateY(-60px)}}
+#cheer svg{width:120px;animation:jump .8s ease-out infinite}
 </style>
 </head>
 
 <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col items-center p-4">
 
-<div class="w-full max-w-lg">
-  <h1 class="text-2xl font-semibold text-center mb-4">Kids Chore Checklist</h1>
+<!-- jumping-kid overlay -->
+<div id="cheer"
+     class="fixed inset-0 flex items-center justify-center bg-black/10 pointer-events-none hidden">
+  <!-- simple SVG kid -->
+  <svg viewBox="0 0 64 64" fill="#facc15">
+    <circle cx="32" cy="10" r="8"/>
+    <path d="M20 62V38l12-8 12 8v24" stroke="#facc15" stroke-width="6" stroke-linecap="round"/>
+    <path d="M12 24l20 8 20-8" stroke="#facc15" stroke-width="6" stroke-linecap="round"/>
+  </svg>
+</div>
 
-  <!-- -- Kid selector -->
+<div class="w-full max-w-lg">
+  <h1 class="text-2xl font-semibold text-center mb-4">Chore Checklist</h1>
+
+  <!-- kid selector -->
   <label class="block text-sm font-medium mb-1" for="kid">Select kid</label>
   <select id="kid" class="w-full mb-4 px-3 py-2 rounded-lg text-gray-900 shadow-inner"></select>
 
-  <!-- -- Date row -->
+  <!-- date row -->
   <div class="flex items-end gap-3 mb-4">
     <div class="flex-1">
       <label class="block text-sm font-medium mb-1" for="date">Choose date</label>
-      <input id="date" type="date"
-             class="w-full rounded-lg px-3 py-2 text-gray-900 shadow-inner">
+      <input id="date" type="date" class="w-full rounded-lg px-3 py-2 text-gray-900 shadow-inner">
     </div>
     <span id="dayBadge"
           class="bg-gray-700 text-sm px-4 h-10 flex items-center rounded-lg whitespace-nowrap"></span>
@@ -74,13 +80,13 @@ tailwind.config = { theme:{ extend:{ fontFamily:{ sans:['Poppins','sans-serif'] 
     <div id="loading" class="flex items-center justify-center">
       <svg class="animate-spin h-7 w-7 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+        <path class="opacity-75" fill="currentColor"
+              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
       <span class="ml-3 text-base text-gray-400">Loading chores…</span>
     </div>
     <div id="listArea"></div>
   </div>
 
-  <!-- save button -->
   <button id="saveBtn"
           class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 transition disabled:opacity-40">
     Save
@@ -91,10 +97,9 @@ tailwind.config = { theme:{ extend:{ fontFamily:{ sans:['Poppins','sans-serif'] 
   <!-- slot-machine spinner -->
   <div id="spinnerArea" class="hidden flex flex-col items-center mt-6">
     <div class="slot-cabinet">
-      <div class="bulb-row">
-        <div class="bulb"></div><div class="bulb"></div><div class="bulb"></div><div class="bulb"></div><div class="bulb"></div>
-        <div class="bulb"></div><div class="bulb"></div><div class="bulb"></div><div class="bulb"></div><div class="bulb"></div>
-      </div>
+      <div class="bulb-row"><div class="bulb"></div><div class="bulb"></div><div class="bulb"></div>
+        <div class="bulb"></div><div class="bulb"></div><div class="bulb"></div>
+        <div class="bulb"></div><div class="bulb"></div><div class="bulb"></div><div class="bulb"></div></div>
       <div id="reelFrame"><div id="reel"></div></div>
       <div class="lever"></div>
     </div>
@@ -102,7 +107,7 @@ tailwind.config = { theme:{ extend:{ fontFamily:{ sans:['Poppins','sans-serif'] 
 </div>
 
 <script>
-/* CONSTANT endpoint */
+/* ENDPOINT constant */
 const ENDPOINT='https://script.google.com/macros/s/AKfycby0mmIgX_IUcSCx5--Q9-4FnEDAsGWX05RUdzCzsqa1GnIvnUXKzprQpG05v-7xxngi/exec';
 const baseRewards=['₱1','₱1','₱1','₱1','₱1','₱1','₱1','₱2','₱2','30 mins watch'];
 
@@ -111,22 +116,33 @@ let chores=[],reelArr=[],rewardDone=false;
 /* helpers */
 const shuffle=a=>a.sort(()=>Math.random()-0.5);
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
-function updateDayBadge(d){document.getElementById('dayBadge').textContent=
-  new Date(d).toLocaleDateString('en-US',{weekday:'long'});}
+
+/* cheer */
+function showCheer(){
+  const cheer=document.getElementById('cheer');
+  cheer.classList.remove('hidden');
+  setTimeout(()=>cheer.classList.add('hidden'),2000);
+}
+
+/* day badge */
+function updateDayBadge(d){
+  document.getElementById('dayBadge').textContent=
+    new Date(d).toLocaleDateString('en-US',{weekday:'long'});
+}
 
 /* bootstrap */
 document.addEventListener('DOMContentLoaded',async()=>{
-  /* kids dropdown */
+  // kids dropdown
   const kids=(await fetch(`${ENDPOINT}?action=kids`).then(r=>r.json())).kids||[];
-  const kidSel=document.getElementById('kid');
-  kidSel.innerHTML=kids.map(k=>`<option>${k}</option>`).join('');
-  kidSel.addEventListener('change',render);
+  document.getElementById('kid').innerHTML=kids.map(k=>`<option>${k}</option>`).join('');
+  document.getElementById('kid').addEventListener('change',render);
 
-  /* date picker */
+  // date picker
   const today=new Date().toISOString().split('T')[0];
-  const dateIn=document.getElementById('date');
-  dateIn.value=today; updateDayBadge(today);
-  dateIn.addEventListener('change',e=>{updateDayBadge(e.target.value); render();});
+  document.getElementById('date').value=today; updateDayBadge(today);
+  document.getElementById('date').addEventListener('change',e=>{
+    updateDayBadge(e.target.value); render();
+  });
 
   document.getElementById('saveBtn').addEventListener('click',save);
   document.addEventListener('change',updateUI);
@@ -134,27 +150,24 @@ document.addEventListener('DOMContentLoaded',async()=>{
   await loadChores(); buildReel(); render();
 });
 
-/* load chore list for selected kid */
+/* load chores for kid */
 async function loadChores(){
   const kid=document.getElementById('kid').value;
   chores=(await fetch(`${ENDPOINT}?action=chores&kid=${encodeURIComponent(kid)}`).then(r=>r.json())).chores||[];
 }
-
-/* build slot reel */
+/* build reel */
 function buildReel(){
   reelArr=shuffle(baseRewards.slice());
   const reel=document.getElementById('reel'); reel.innerHTML='';
-  const extended=[...reelArr,...reelArr,...reelArr,...reelArr];
-  extended.forEach(t=>{
+  [...reelArr,...reelArr,...reelArr,...reelArr].forEach(t=>{
     const d=document.createElement('div'); d.className='tile'; d.textContent=t;
     reel.appendChild(d);
   });
 }
-
-/* spin 5 s fast→slow, return landed reward */
+/* spin 5s */
 async function spinAndGetReward(){
   const idx=Math.floor(Math.random()*10);
-  const offset=(20+idx)*72;             // deeper into reel for long spin
+  const offset=(20+idx)*72;
   const reel=document.getElementById('reel');
   reel.style.transition='transform 5s cubic-bezier(.15,.8,.35,1)';
   reel.style.transform=`translateY(-${offset}px)`;
@@ -162,16 +175,24 @@ async function spinAndGetReward(){
   return reelArr[idx];
 }
 
-/* render chore list & state */
+/* attach tick handlers */
+function hookCheckboxes(){
+  document.querySelectorAll('[data-c]').forEach(cb=>{
+    cb.addEventListener('change',e=>{
+      if(e.target.checked && !rewardDone) showCheer();
+    });
+  });
+}
+
+/* render */
 async function render(){
   rewardDone=false; document.getElementById('resultArea').innerHTML='';
-  const load=document.getElementById('loading'); const list=document.getElementById('listArea');
+  const load=document.getElementById('loading'), list=document.getElementById('listArea');
   load.classList.remove('hidden'); list.innerHTML='';
 
   await loadChores(); buildReel();
 
-  const date=document.getElementById('date').value;
-  const kid =document.getElementById('kid').value;
+  const date=document.getElementById('date').value, kid=document.getElementById('kid').value;
   const data=await fetch(`${ENDPOINT}?action=log&date=${date}&kid=${encodeURIComponent(kid)}`).then(r=>r.json());
   const rows=Array.isArray(data.rows)?data.rows:[];
 
@@ -191,11 +212,11 @@ async function render(){
     </label>`).join('');
 
   load.classList.add('hidden');
-  updateUI();
+  hookCheckboxes(); updateUI();
 }
 
-/* UI updates + disable ticks */
-function disableTicks(dis){ document.querySelectorAll('[data-c]').forEach(cb=>cb.disabled=dis); }
+/* UI updates */
+function disableTicks(dis){document.querySelectorAll('[data-c]').forEach(cb=>cb.disabled=dis);}
 function updateUI(){
   const boxes=[...document.querySelectorAll('[data-c]')];
   const checked=boxes.filter(b=>b.checked).length;
@@ -207,10 +228,9 @@ function updateUI(){
   disableTicks(rewardDone);
 }
 
-/* save routine */
+/* save */
 async function save(){
-  const date=document.getElementById('date').value;
-  const kid =document.getElementById('kid').value;
+  const date=document.getElementById('date').value, kid=document.getElementById('kid').value;
   const boxes=[...document.querySelectorAll('[data-c]')];
   const allDone=boxes.length && boxes.every(b=>b.checked);
 
